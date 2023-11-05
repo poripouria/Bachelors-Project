@@ -29,17 +29,18 @@ def calculate_omega(t, t_max, alpha=0.2):
         return 0.9
     return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))
 
-values = { """ Values of parameters (Based on Table 2) """
-    'c1': 2,                                # Social coefficient
-    'c2': 2,                                # Cognitive coefficient
-    'omega': 0.5,                           # Inertia weight (𝜔)
-    'r1': random.uniform(0,1),              # Random binary variable
-    'r2': random.uniform(0,1),              # Random binary variable
-    'swarm_size_lvl1': 5,                   # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
-    'swarm_size_lvl2': 5,                   # Swarm size at Swarm Level-2
-    'max_iter_lvl1': random.randint(5,8),   # Maximum iterations at Swarm Level-1
-    'max_iter_lvl2': 5                      # Maximum iterations at Swarm Level-2
-}
+class Hybrid_MPSO_CNN:
+    def __init__(PSL1, PSL2):
+        self.c1 = 2,                                # Social coefficient
+        self.c2 = 2,                                # Cognitive coefficient
+        self.omega = calculate_omega(t, t_max),     # Inertia weight (𝜔)
+        self.r1 = random.uniform(0,1),              # Random binary variable
+        self.r2 = random.uniform(0,1),              # Random binary variable
+        self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
+        self.swarm_size_lvl2 = 5*PSL1.nC*8,          # Swarm size at Swarm Level-2
+        self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
+        self.max_iter_lvl2 = 5                      # Maximum iterations at Swarm Level-2
+
 
 class Particle_Swarm_L1:
     def __init__(self, search_space):
@@ -61,6 +62,7 @@ class Particle_Swarm_L2:
         self.p_pp = randint(search_space['p_pp'])
         self.op = randint(search_space['op'])
 
+
 class CNN:
     def __init__(self, hyperparameters):
         self.hyperparameters = hyperparameters
@@ -76,28 +78,30 @@ class CNN:
         self.p_pp = hyperparameters['p_pp']    # padding pixels in pooling layer
         self.op = hyperparameters['op']        # number of output neurons in the fully connected layer
 
-    def buid_model(self):
-        model = Sequential()
+        self.model = Sequential()
 
+    def buid_model(self):
         # Add convolution and pooling layers according to the hyperparameters
         for i in range(self.nC):
-            model.add(layers.Conv2D(self.c_nf[i], 
-                                    self.c_fs[i], 
-                                    strides = self.c_ss[i], 
-                                    padding = self.c_pp[i], 
-                                    activation = 'relu'))
+            self.model.add(layers.Conv2D(filters = self.c_nf[i], 
+                                         kernel_size = self.c_fs[i], 
+                                         strides = self.c_ss[i], 
+                                         padding = self.c_pp[i], 
+                                         activation = 'relu'))
             if i < self.nP:
-                model.add(layers.MaxPooling2D(self.p_fs[i], 
-                                              strides = self.p_ss[i], 
-                                              padding = self.p_pp[i]))
+                self.model.add(layers.MaxPooling2D(pool_size = self.p_fs[i], 
+                                                   strides = self.p_ss[i], 
+                                                   padding = self.p_pp[i]))
         # Flatten the output before adding fully connected layers
-        model.add(layers.Flatten())
+        self.model.add(layers.Flatten())
         # Add fully connected layers according to the hyperparameters
         for j in range(self.nF):
-            model.add(layers.Dense(self.op[j], 
-                      activation = 'relu'))
-        # Add the final output layer with 10 neurons for 10 classes and softmax activation
-        model.add(layers.Dense(10, activation = 'softmax'))
+            self.model.add(layers.Dense(units = self.op[j], 
+                                   activation = 'relu'))
+                      
+        self.model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
-        return model
+        def fitness(self, x_test, y_test):
+            test_loss, test_acc = self.model.evaluate(x_test, y_test)
+            return test_acc
 
