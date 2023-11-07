@@ -37,7 +37,7 @@ class Hybrid_MPSO_CNN:
         self.r1 = random.uniform(0,1),              # Random binary variable
         self.r2 = random.uniform(0,1),              # Random binary variable
         self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
-        self.swarm_size_lvl2 = 5*PSL1.nC*8,          # Swarm size at Swarm Level-2
+        self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
         self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
         self.max_iter_lvl2 = 5                      # Maximum iterations at Swarm Level-2
 
@@ -46,8 +46,17 @@ class Particle_Swarm_L1:
     def __init__(self, search_space):
         self.search_space = search_space
         self.nC = randint(search_space['nC'])
-        self.nP = randint(search_space['nP'])
-        self.nF = randint(search_space['nF'])
+        self.nP = randint(search_space['nP'], self.nC)
+        self.nF = randint(search_space['nF'], self.nC)
+
+
+        self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
+        self.vel_i = [0, 0, 0]                          # Particle velocity
+        self.pbest_i = self.pos_i                       # Personal best position
+        self.F_pbest_i = float("inf")                   # Personal best fitness
+        self.gbest_i = None                             # Global best position
+        self.F_gbest_i = float("inf")                   # Global best fitness
+        self.F_i = None                                 # Current fitness
         
 
 class Particle_Swarm_L2:
@@ -61,6 +70,16 @@ class Particle_Swarm_L2:
         self.p_ss = randint(search_space['p_ss'])
         self.p_pp = randint(search_space['p_pp'])
         self.op = randint(search_space['op'])
+
+
+        self.pos_ij = [self.c_nf, self.c_fs, self.c_pp, self.c_ss,
+                       self.p_fs, self.p_ss, self.p_pp, self.op]        # Particle position
+        self.vel_ij = [0] * len(self.pos_ij)                            # Particle velocity 
+        self.pbest_ij = self.pos_ij                                     # Personal best position
+        self.F_pbest_ij = float("inf")                                  # Personal best fitness 
+        self.gbest_ij = None                                            # Global best position 
+        self.F_gbest_ij = float("inf")                                  # Global best fitness
+        self.F_ij = None                                                # Current fitness
 
 
 class CNN:
