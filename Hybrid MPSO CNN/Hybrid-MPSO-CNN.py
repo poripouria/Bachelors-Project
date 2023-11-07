@@ -85,22 +85,21 @@ class Particle_Swarm_L2:
 class CNN:
     def __init__(self, hyperparameters):
         self.hyperparameters = hyperparameters
-        self.nC = hyperparameters['nC']        # number of convolution layers
-        self.nP = hyperparameters['nP']        # number of pooling layers
-        self.nF = hyperparameters['nF']        # number of fully connected layers
-        self.c_nf = hyperparameters['c_nf']    # number of filters in the convolutional layer
-        self.c_fs = hyperparameters['c_fs']    # size of filter/kernel in the convolutional layer
-        self.c_pp = hyperparameters['c_pp']    # padding (valid or same) requirement in the convolutional layer
-        self.c_ss = hyperparameters['c_ss']    # size of stride in the convolutional layer
-        self.p_fs = hyperparameters['p_fs']    # size of a filter in the max pooling layer
-        self.p_ss = hyperparameters['p_ss']    # size of stride in the max-pooling layer
-        self.p_pp = hyperparameters['p_pp']    # padding pixels in pooling layer
-        self.op = hyperparameters['op']        # number of output neurons in the fully connected layer
+        self.nC = hyperparameters['nC']             # number of convolution layers
+        self.nP = hyperparameters['nP']             # number of pooling layers
+        self.nF = hyperparameters['nF']             # number of fully connected layers
+        self.c_nf = hyperparameters['c_nf']         # number of filters in the convolutional layer
+        self.c_fs = hyperparameters['c_fs']         # size of filter/kernel in the convolutional layer
+        self.c_pp = hyperparameters['c_pp']         # padding (valid or same) requirement in the convolutional layer
+        self.c_ss = hyperparameters['c_ss']         # size of stride in the convolutional layer
+        self.p_fs = hyperparameters['p_fs']         # size of a filter in the max pooling layer
+        self.p_ss = hyperparameters['p_ss']         # size of stride in the max-pooling layer
+        self.p_pp = hyperparameters['p_pp']         # padding pixels in pooling layer
+        self.op = hyperparameters['op']             # number of output neurons in the fully connected layer
 
         self.model = Sequential()
 
     def buid_model(self):
-        # Add convolution and pooling layers according to the hyperparameters
         for i in range(self.nC):
             self.model.add(layers.Conv2D(filters = self.c_nf[i], 
                                          kernel_size = self.c_fs[i], 
@@ -111,12 +110,12 @@ class CNN:
                 self.model.add(layers.MaxPooling2D(pool_size = self.p_fs[i], 
                                                    strides = self.p_ss[i], 
                                                    padding = self.p_pp[i]))
-        # Flatten the output before adding fully connected layers
+                                                   
         self.model.add(layers.Flatten())
-        # Add fully connected layers according to the hyperparameters
+        
         for j in range(self.nF):
             self.model.add(layers.Dense(units = self.op[j], 
-                                   activation = 'relu'))
+                                        activation = 'relu'))
                       
         self.model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
