@@ -24,22 +24,22 @@ search_space = { """ Range of hyperparameters (Based on Table 1) """
     'op':   (1, 1024)       # Number of neurons
 }
 
-def calculate_omega(t, t_max, alpha=0.2):
-    if t < alpha * t_max:
-        return 0.9
-    return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))
-
 class Hybrid_MPSO_CNN:
     def __init__(PSL1, PSL2):
         self.c1 = 2,                                # Social coefficient
         self.c2 = 2,                                # Cognitive coefficient
-        self.omega = calculate_omega(t, t_max),     # Inertia weight (𝜔)
+        self.omega = 0.9,                           # Inertia weight (𝜔)
         self.r1 = random.uniform(0,1),              # Random binary variable
         self.r2 = random.uniform(0,1),              # Random binary variable
         self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
         self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
         self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
-        self.max_iter_lvl2 = 5                      # Maximum iterations at Swarm Level-2
+        self.max_iter_lvl2 = 5     
+
+    def calculate_omega(self, t, t_max, alpha=0.2):
+        if t < alpha * t_max:
+            return 0.9
+        return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
 
 
 class Particle_Swarm_L1:
@@ -48,7 +48,6 @@ class Particle_Swarm_L1:
         self.nC = randint(search_space['nC'])
         self.nP = randint(search_space['nP'], self.nC)
         self.nF = randint(search_space['nF'], self.nC)
-
 
         self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
         self.vel_i = [0, 0, 0]                          # Particle velocity
@@ -70,7 +69,6 @@ class Particle_Swarm_L2:
         self.p_ss = randint(search_space['p_ss'])
         self.p_pp = randint(search_space['p_pp'])
         self.op = randint(search_space['op'])
-
 
         self.pos_ij = [self.c_nf, self.c_fs, self.c_pp, self.c_ss,
                        self.p_fs, self.p_ss, self.p_pp, self.op]        # Particle position
