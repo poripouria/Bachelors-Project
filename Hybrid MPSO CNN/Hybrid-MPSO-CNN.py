@@ -35,16 +35,9 @@ class Hybrid_MPSO_CNN:
         self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
         self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
         self.max_iter_lvl2 = 5  
-
-        # Max iterations
-        self.max_iter_lvl1 = random.randint(5,8)
-        self.max_iter_lvl2 = 5
-
-        # Initialize swarms
-        self.swarm_lvl1 = [Particle_Swarm_L1(search_space) for _ in range(self.swarm_size_lvl1)]
+        
+        self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
         self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl1)]
-
-        # Initialize global best
         self.gbest = None
 
     def optimize(self):
@@ -96,11 +89,7 @@ class Hybrid_MPSO_CNN:
             # Update global best for level 2
             gbest_ij = min(self.swarm_lvl2[particle_l1], key=lambda x: x.F_ij)
 
-        return gbest_ij
-
-    def calculate_inertia(self, t, t_max):
-        # Sigmoid-like inertia weight formula
-        return 0.9 if t < 0.2*t_max else 1/(1+math.e**(-10*(t/t_max - 1)))   
+        return gbest_ij   
 
     def calculate_omega(self, t, t_max, alpha=0.2):
         if t < alpha * t_max:
