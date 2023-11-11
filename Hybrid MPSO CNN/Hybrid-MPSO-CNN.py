@@ -52,10 +52,33 @@ class Particle_Swarm_L1:
         self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
         self.vel_i = [0, 0, 0]                          # Particle velocity
         self.pbest_i = self.pos_i                       # Personal best position
-        self.F_pbest_i = float("inf")                   # Personal best fitness
         self.gbest_i = None                             # Global best position
+        self.F_pbest_i = float("inf")                   # Personal best fitness
         self.F_gbest_i = float("inf")                   # Global best fitness
         self.F_i = None                                 # Current fitness
+
+    def evaluate(self, cnn):
+        """Evaluate particle fitness using CNN"""
+        cnn.build_model(self.pos_i)
+        self.F_i = cnn.fitness()
+        
+        # Check personal best
+        if self.F_i < self.F_pbest_i:
+            self.pbest_i = self.pos_i
+        # Check global best
+        if self.gbest_i is None or self.F_i < self.F_gbest_i:
+            self.gbest_i = self.pos_i
+
+    def update_velocity(self, c1, c2, r1, r2):
+        """Update particle velocity"""
+        for i in range(len(self.vel_i)):
+            self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(self.gbest_i[i] - self.pos_i[i])
+                             
+    def update_position(self, bounds):
+        """Update particle position within bounds"""
+        for i in range(len(self.pos_i)):
+            self.pos_i[i] += self.vel_i[i]
+            self.pos_i[i] = max(bounds[i][0], min(self.pos_i[i], bounds[i][1]))
         
 
 class Particle_Swarm_L2:
@@ -74,10 +97,35 @@ class Particle_Swarm_L2:
                        self.p_fs, self.p_ss, self.p_pp, self.op]        # Particle position
         self.vel_ij = [0] * len(self.pos_ij)                            # Particle velocity 
         self.pbest_ij = self.pos_ij                                     # Personal best position
-        self.F_pbest_ij = float("inf")                                  # Personal best fitness 
         self.gbest_ij = None                                            # Global best position 
+        self.F_pbest_ij = float("inf")                                  # Personal best fitness 
         self.F_gbest_ij = float("inf")                                  # Global best fitness
         self.F_ij = None                                                # Current fitness
+
+    def evaluate(self, cnn):
+        """Evaluate particle fitness using CNN"""
+        cnn.build_model(self.pos_ij)  
+        self.F_ij = cnn.fitness()
+
+        # Check personal best
+        if self.F_ij < self.F_pbest_ij:
+            self.pbest_ij = self.pos_ij
+            self.F_pbest_ij = self.F_ij
+        # Check global best
+        if self.F_ij < self.F_gbest_ij:
+            self.gbest_ij = self.pos_ij
+            self.F_gbest_ij = self.F_ij
+
+    def update_velocity(self, c1, c2, r1, r2, w):
+        """Update particle velocity"""
+        for i in range(len(self.vel_ij)):
+            self.vel_ij[i] = w*self.vel_ij[i] + c1*r1*(self.pbest_ij[i] - self.pos_ij[i]) + c2*r2*(self.gbest_ij[i] - self.pos_ij[i])
+                             
+    def update_position(self, bounds):
+        """Update particle position within bounds"""
+        for i in range(len(self.pos_ij)):
+            self.pos_ij[i] += self.vel_ij[i]
+            self.pos_ij[i] = max(bounds[i][0], min(self.pos_ij[i], bounds[i][1]))
 
 
 class CNN:
@@ -117,7 +165,7 @@ class CNN:
                       
         self.model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
 
-        def fitness(self, x_test, y_test):
-            test_loss, test_acc = self.model.evaluate(x_test, y_test)
-            return test_acc
+    def fitness(self, x_test, y_test):
+        test_loss, test_acc = self.model.evaluate(x_test, y_test)
+        return test_acc
 
