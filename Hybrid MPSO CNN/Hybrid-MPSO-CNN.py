@@ -24,79 +24,6 @@ search_space = { """ Range of hyperparameters (Based on Table 1) """
     'op':   (1, 1024)       # Number of neurons
 }
 
-class Hybrid_MPSO_CNN:
-    def __init__(PSL1, PSL2):
-        self.c1 = 2,                                # Social coefficient
-        self.c2 = 2,                                # Cognitive coefficient
-        self.omega = 0.9,                           # Inertia weight (𝜔)
-        self.r1 = random.uniform(0,1),              # Random binary variable
-        self.r2 = random.uniform(0,1),              # Random binary variable
-        self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
-        self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
-        self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
-        self.max_iter_lvl2 = 5  
-        
-        self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
-        self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl1)]
-        self.gbest = None
-
-    def optimize(self):
-        
-        # Level 1 optimization loop
-        for i in range(self.max_iter_lvl1):
-            
-            # Calculate inertia weight
-            w = self.calculate_inertia(i, self.max_iter_lvl1)
-            
-            for j in range(self.swarm_size_lvl1):
-
-                # Level 2 optimization 
-                gbest_ij = self.level2_optimize(self.swarm_lvl1[j])
-
-                # Update swarm lvl 1 particle
-                self.swarm_lvl1[j].evaluate(gbest_ij, CNN)
-                self.swarm_lvl1[j].update_velocity(w, self.c1, self.c2, self.r1, self.r2) 
-                self.swarm_lvl1[j].update_position(self.search_space)
-
-                # Update global best
-                if self.swarm_lvl1[j].F_i < self.gbest.F_i:
-                    self.gbest = self.swarm_lvl1[j]
-
-        return self.gbest
-        
-        
-    def level2_optimize(self, particle_l1):
-
-        # Create swarm 
-        for _ in range(self.swarm_size_lvl2):
-            particle_l2 = Particle_Swarm_L2(self.search_space)
-            self.swarm_lvl2[particle_l1].append(particle_l2)
-
-        # Level 2 optimization loop
-        for i in range(self.max_iter_lvl2):
-
-            w = self.calculate_inertia(i, self.max_iter_lvl2)
-            
-            for particle in self.swarm_lvl2[particle_l1]:
-
-                # Evaluate fitness
-                particle.evaluate(CNN) 
-
-                # Update velocity and position
-                particle.update_velocity(w, self.c1, self.c2, self.r1, self.r2)
-                particle.update_position(self.search_space)
-
-            # Update global best for level 2
-            gbest_ij = min(self.swarm_lvl2[particle_l1], key=lambda x: x.F_ij)
-
-        return gbest_ij   
-
-    def calculate_omega(self, t, t_max, alpha=0.2):
-        if t < alpha * t_max:
-            return 0.9
-        return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
-
-
 class Particle_Swarm_L1:
     def __init__(self, search_space):
         self.search_space = search_space
@@ -108,6 +35,8 @@ class Particle_Swarm_L1:
         self.vel_i = [0, 0, 0]                          # Particle velocity
         self.pbest_i = self.pos_i                       # Personal best position
         self.gbest_i = None                             # Global best position
+        # self.swarm_sl2 =  
+
         self.F_pbest_i = float("inf")                   # Personal best fitness
         self.F_gbest_i = float("inf")                   # Global best fitness
         self.F_i = None                                 # Current fitness
@@ -183,6 +112,65 @@ class Particle_Swarm_L2:
             self.pos_ij[i] = max(bounds[i][0], min(self.pos_ij[i], bounds[i][1]))
 
 
+class Hybrid_MPSO_CNN:
+    def __init__(PSL1, PSL2):
+        self.c1 = 2,                                # Social coefficient
+        self.c2 = 2,                                # Cognitive coefficient
+        self.omega = 0.9,                           # Inertia weight (𝜔)
+        self.r1 = random.uniform(0,1),              # Random binary variable
+        self.r2 = random.uniform(0,1),              # Random binary variable
+        self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
+        self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
+        self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
+        self.max_iter_lvl2 = 5  
+        
+        self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
+        self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl2)]
+        self.gbest = None
+
+    def level1_optimize(self):
+        
+        for i in range(self.max_iter_lvl1):
+            w = self.calculate_inertia(i, self.max_iter_lvl1)
+
+            for j in range(self.swarm_size_lvl1):
+                gbest_ij = self.level2_optimize(self.swarm_lvl1[j])
+
+                self.swarm_lvl1[j].evaluate(gbest_ij, CNN)
+                self.swarm_lvl1[j].update_velocity(w, self.c1, self.c2, self.r1, self.r2) 
+                self.swarm_lvl1[j].update_position(self.search_space)
+
+                if self.swarm_lvl1[j].F_i < self.gbest.F_i:
+                    self.gbest = self.swarm_lvl1[j]
+
+        return self.gbest
+        
+        
+    def level2_optimize(self, particle_l1):
+
+        for _ in range(self.swarm_size_lvl2):
+            particle_l2 = Particle_Swarm_L2(self.search_space)
+            self.swarm_lvl2[particle_l1].append(particle_l2)
+
+        for i in range(self.max_iter_lvl2):
+            w = self.calculate_inertia(i, self.max_iter_lvl2)
+            
+            for particle in self.swarm_lvl2[particle_l1]:
+                particle.evaluate(CNN) 
+
+                particle.update_velocity(w, self.c1, self.c2, self.r1, self.r2)
+                particle.update_position(self.search_space)
+
+            gbest_ij = min(self.swarm_lvl2[particle_l1], key=lambda x: x.F_ij)
+
+        return gbest_ij   
+
+    def calculate_omega(self, t, t_max, alpha=0.2):
+        if t < alpha * t_max:
+            return 0.9
+        return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
+
+
 class CNN:
     def __init__(self, hyperparameters):
         self.hyperparameters = hyperparameters
@@ -223,4 +211,21 @@ class CNN:
     def fitness(self, x_test, y_test):
         test_loss, test_acc = self.model.evaluate(x_test, y_test)
         return test_acc
+
+    def __repr__(self):
+        return str(self.model.summary())
+
+    def __str__(self):
+        model_summary = (f"nC: {self.nC}\n"
+                        f"nP: {self.nP}\n"
+                        f"nF: {self.nF}\n"
+                        f"c_nf: {self.c_nf}\n"
+                        f"c_fs: {self.c_fs}\n"
+                        f"c_pp: {self.c_pp}\n"
+                        f"c_ss: {self.c_ss}\n"
+                        f"p_fs: {self.p_fs}\n"
+                        f"p_ss: {self.p_ss}\n"
+                        f"p_pp: {self.p_pp}\n"
+                        f"op: {self.op}\n")
+        return model_summary
 
