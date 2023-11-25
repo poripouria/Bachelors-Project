@@ -15,11 +15,11 @@ class UnfoldingBlock(keras.layers.Layer):
         return x  
 
     def call(self, inputs):  
-        lambda = keras.backend.exp(self.lambda_var) 
+        lambda_var = keras.backend.exp(self.lambda_var) 
         mu = keras.backend.exp(self.mu_var)
         gamma = keras.backend.exp(self.gamma_var)
         
-        grad = self.H.T @ (self.H @ inputs - self.y) + lambda*self.D.T@self.D@inputs
+        grad = self.H.T @ (self.H @ inputs - self.y) + lambda_var*self.D.T@self.D@inputs
         
         prox_input = inputs - gamma*grad
         output = self.proximal_op(prox_input, mu, gamma)
