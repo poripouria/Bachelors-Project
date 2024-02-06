@@ -7,6 +7,8 @@ Description:
 
 import random
 import math
+import tensorflow as tf
+import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
@@ -27,9 +29,9 @@ search_space = { """ Range of hyperparameters (Based on Table 1) """
 class Particle_Swarm_L1:
     def __init__(self, search_space):
         self.search_space = search_space
-        self.nC = randint(search_space['nC'])
-        self.nP = randint(search_space['nP'], self.nC)
-        self.nF = randint(search_space['nF'], self.nC)
+        self.nC = random.randint(search_space['nC'])
+        self.nP = random.randint(search_space['nP'], self.nC)
+        self.nF = random.randint(search_space['nF'], self.nC)
 
         self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
         self.vel_i = [0, 0, 0]                          # Particle velocity
@@ -55,6 +57,7 @@ class Particle_Swarm_L1:
 
     def update_velocity(self, c1, c2, r1, r2):
         """Update particle velocity"""
+        w = 0.9
         for i in range(len(self.vel_i)):
             self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(self.gbest_i[i] - self.pos_i[i])
                              
@@ -68,14 +71,14 @@ class Particle_Swarm_L1:
 class Particle_Swarm_L2:
     def __init__(self, search_space):
         self.search_space = search_space
-        self.c_nf = randint(search_space['c_nf'])
-        self.c_fs = randint(search_space['c_fs'])
-        self.c_pp = randint(search_space['c_pp'])
-        self.c_ss = randint(search_space['c_ss'])
-        self.p_fs = randint(search_space['p_fs'])
-        self.p_ss = randint(search_space['p_ss'])
-        self.p_pp = randint(search_space['p_pp'])
-        self.op = randint(search_space['op'])
+        self.c_nf = random.randint(search_space['c_nf'])
+        self.c_fs = random.randint(search_space['c_fs'])
+        self.c_pp = random.randint(search_space['c_pp'])
+        self.c_ss = random.randint(search_space['c_ss'])
+        self.p_fs = random.randint(search_space['p_fs'])
+        self.p_ss = random.randint(search_space['p_ss'])
+        self.p_pp = random.randint(search_space['p_pp'])
+        self.op = random.randint(search_space['op'])
 
         self.pos_ij = [self.c_nf, self.c_fs, self.c_pp, self.c_ss,
                        self.p_fs, self.p_ss, self.p_pp, self.op]        # Particle position
@@ -113,7 +116,7 @@ class Particle_Swarm_L2:
 
 
 class Hybrid_MPSO_CNN:
-    def __init__(PSL1, PSL2):
+    def __init__(self, PSL1, PSL2):
         self.c1 = 2,                                # Social coefficient
         self.c2 = 2,                                # Cognitive coefficient
         self.omega = 0.9,                           # Inertia weight (𝜔)
@@ -121,8 +124,8 @@ class Hybrid_MPSO_CNN:
         self.r2 = random.uniform(0,1),              # Random binary variable
         self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
         self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
-        self.max_iter_lvl1 = random.randint(5,8),   # Maximum iterations at Swarm Level-1
-        self.max_iter_lvl2 = 5  
+        self.max_iter_lvl1 = random.random.randint(5,8),   # Maximum iterations at Swarm Level-1
+        self.max_iter_lvl2 = 5
         
         self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
         self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl2)]
@@ -190,20 +193,20 @@ class CNN:
 
     def buid_model(self):
         for i in range(self.nC):
-            self.model.add(layers.Conv2D(filters = self.c_nf[i], 
+            self.model.add(keras.layers.Conv2D(filters = self.c_nf[i], 
                                          kernel_size = self.c_fs[i], 
                                          strides = self.c_ss[i], 
                                          padding = self.c_pp[i], 
                                          activation = 'relu'))
             if i < self.nP:
-                self.model.add(layers.MaxPooling2D(pool_size = self.p_fs[i], 
+                self.model.add(keras.layers.MaxPooling2D(pool_size = self.p_fs[i], 
                                                    strides = self.p_ss[i], 
                                                    padding = self.p_pp[i]))
                                                    
-        self.model.add(layers.Flatten())
+        self.model.add(keras.layers.Flatten())
         
         for j in range(self.nF):
-            self.model.add(layers.Dense(units = self.op[j], 
+            self.model.add(keras.layers.Dense(units = self.op[j], 
                                         activation = 'relu'))
                       
         self.model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
@@ -227,5 +230,4 @@ class CNN:
                         f"p_ss: {self.p_ss}\n"
                         f"p_pp: {self.p_pp}\n"
                         f"op: {self.op}\n")
-        return model_summary
-
+        return model_summary, str(self.model.summary())
