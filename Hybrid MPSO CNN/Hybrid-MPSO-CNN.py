@@ -12,32 +12,17 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
-search_space = { """ Range of hyperparameters (Based on Table 1) """
-    'nC':   (1, 5),         # Number of convolutional layers
-    'nP':   (1, 5),         # Number of pooling layers
-    'nF':   (1, 5),         # Number of fully connected layers
-    'c_nf': (1, 64),        # Number of filters
-    'c_fs': (1, 13),        # Filter Size (odd) 
-    'c_pp': (0, 1),         # Padding pixels (0: "valid", 1: "same")
-    'c_ss': (1, 5),         # Stride Size (< 𝑐_fs)
-    'p_fs': (1, 13),        # Filter Size (odd)
-    'p_ss': (1, 5),         # Stride Size
-    'p_pp': (0, 1),         # Padding pixels (< 𝑝_fs) (0: "valid", 1: "same")
-    'op':   (1, 1024)       # Number of neurons
-}
-
 class Particle_Swarm_L1:
     def __init__(self, search_space):
-        self.search_space = search_space
         self.nC = random.randint(search_space['nC'])
         self.nP = random.randint(search_space['nP'], self.nC)
         self.nF = random.randint(search_space['nF'], self.nC)
 
         self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
         self.vel_i = [0, 0, 0]                          # Particle velocity
+        
         self.pbest_i = self.pos_i                       # Personal best position
         self.gbest_i = None                             # Global best position
-        # self.swarm_sl2 =  
 
         self.F_pbest_i = float("inf")                   # Personal best fitness
         self.F_gbest_i = float("inf")                   # Global best fitness
@@ -70,7 +55,6 @@ class Particle_Swarm_L1:
 
 class Particle_Swarm_L2:
     def __init__(self, search_space):
-        self.search_space = search_space
         self.c_nf = random.randint(search_space['c_nf'])
         self.c_fs = random.randint(search_space['c_fs'])
         self.c_pp = random.randint(search_space['c_pp'])
@@ -78,13 +62,15 @@ class Particle_Swarm_L2:
         self.p_fs = random.randint(search_space['p_fs'])
         self.p_ss = random.randint(search_space['p_ss'])
         self.p_pp = random.randint(search_space['p_pp'])
-        self.op = random.randint(search_space['op'])
+        self.op   = random.randint(search_space['op'])
 
         self.pos_ij = [self.c_nf, self.c_fs, self.c_pp, self.c_ss,
                        self.p_fs, self.p_ss, self.p_pp, self.op]        # Particle position
         self.vel_ij = [0] * len(self.pos_ij)                            # Particle velocity 
+        
         self.pbest_ij = self.pos_ij                                     # Personal best position
         self.gbest_ij = None                                            # Global best position 
+        
         self.F_pbest_ij = float("inf")                                  # Personal best fitness 
         self.F_gbest_ij = float("inf")                                  # Global best fitness
         self.F_ij = None                                                # Current fitness
@@ -117,15 +103,28 @@ class Particle_Swarm_L2:
 
 class Hybrid_MPSO_CNN:
     def __init__(self, PSL1, PSL2):
-        self.c1 = 2,                                # Social coefficient
-        self.c2 = 2,                                # Cognitive coefficient
-        self.omega = 0.9,                           # Inertia weight (𝜔)
-        self.r1 = random.uniform(0,1),              # Random binary variable
-        self.r2 = random.uniform(0,1),              # Random binary variable
-        self.swarm_size_lvl1 = 5*3,                 # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
-        self.swarm_size_lvl2 = 5*PSL1.nC*8,         # Swarm size at Swarm Level-2
-        self.max_iter_lvl1 = random.random.randint(5,8),   # Maximum iterations at Swarm Level-1
+        self.c1 = 2,                                        # Social coefficient
+        self.c2 = 2,                                        # Cognitive coefficient
+        self.omega = 0.9,                                   # Inertia weight (𝜔)
+        self.r1 = random.uniform(0,1),                      # Random binary variable
+        self.r2 = random.uniform(0,1),                      # Random binary variable
+        self.swarm_size_lvl1 = 5*3,                         # Swarm size at Swarm Level-1 (nP≤ nC, nF ≤ nC)
+        self.swarm_size_lvl2 = 5*PSL1.nC*8,                 # Swarm size at Swarm Level-2
+        self.max_iter_lvl1 = random.random.randint(5,8),    # Maximum iterations at Swarm Level-1
         self.max_iter_lvl2 = 5
+        self.search_space = { """ Range of hyperparameters (Based on Table 1) """
+                                'nC':   (1, 5),         # Number of convolutional layers
+                                'nP':   (1, 5),         # Number of pooling layers
+                                'nF':   (1, 5),         # Number of fully connected layers
+                                'c_nf': (1, 64),        # Number of filters
+                                'c_fs': (1, 13),        # Filter Size (odd) 
+                                'c_pp': (0, 1),         # Padding pixels (0: "valid", 1: "same")
+                                'c_ss': (1, 5),         # Stride Size (< 𝑐_fs)
+                                'p_fs': (1, 13),        # Filter Size (odd)
+                                'p_ss': (1, 5),         # Stride Size
+                                'p_pp': (0, 1),         # Padding pixels (< 𝑝_fs) (0: "valid", 1: "same")
+                                'op':   (1, 1024)       # Number of neurons
+                            }
         
         self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
         self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl2)]
@@ -168,7 +167,7 @@ class Hybrid_MPSO_CNN:
 
         return gbest_ij   
 
-    def calculate_omega(self, t, t_max, alpha=0.2):
+    def calculate_omega(t, t_max, alpha=0.2):
         if t < alpha * t_max:
             return 0.9
         return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
