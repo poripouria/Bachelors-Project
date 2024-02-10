@@ -7,8 +7,6 @@ Description:
 
 import random
 import math
-import tensorflow as tf
-import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
@@ -40,9 +38,8 @@ class Particle_Swarm_L1:
         if self.gbest_i is None or self.F_i < self.F_gbest_i:
             self.gbest_i = self.pos_i
 
-    def update_velocity(self, c1, c2, r1, r2):
+    def update_velocity(self, w, c1, c2, r1, r2):
         """Update particle velocity"""
-        w = 0.9
         for i in range(len(self.vel_i)):
             self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(self.gbest_i[i] - self.pos_i[i])
                              
@@ -87,7 +84,7 @@ class Particle_Swarm_L2:
             self.gbest_ij = self.pos_ij
             self.F_gbest_ij = self.F_ij
 
-    def update_velocity(self, c1, c2, r1, r2, w):
+    def update_velocity(self, w, c1, c2, r1, r2):
         """Update particle velocity"""
         for i in range(len(self.vel_ij)):
             self.vel_ij[i] = w*self.vel_ij[i] + c1*r1*(self.pbest_ij[i] - self.pos_ij[i]) + c2*r2*(self.gbest_ij[i] - self.pos_ij[i])
@@ -175,7 +172,6 @@ class Hybrid_MPSO_CNN:
 
 class CNN:
     def __init__(self, hyperparameters):
-        self.hyperparameters = hyperparameters
         self.nC = hyperparameters['nC']             # number of convolution layers
         self.nP = hyperparameters['nP']             # number of pooling layers
         self.nF = hyperparameters['nF']             # number of fully connected layers
@@ -193,22 +189,24 @@ class CNN:
     def buid_model(self):
         for i in range(self.nC):
             self.model.add(keras.layers.Conv2D(filters = self.c_nf[i], 
-                                         kernel_size = self.c_fs[i], 
-                                         strides = self.c_ss[i], 
-                                         padding = self.c_pp[i], 
-                                         activation = 'relu'))
+                                               kernel_size = self.c_fs[i], 
+                                               strides = self.c_ss[i], 
+                                               padding = self.c_pp[i], 
+                                               activation = 'relu'))
             if i < self.nP:
                 self.model.add(keras.layers.MaxPooling2D(pool_size = self.p_fs[i], 
-                                                   strides = self.p_ss[i], 
-                                                   padding = self.p_pp[i]))
+                                                         strides = self.p_ss[i], 
+                                                         padding = self.p_pp[i]))
                                                    
         self.model.add(keras.layers.Flatten())
         
         for j in range(self.nF):
             self.model.add(keras.layers.Dense(units = self.op[j], 
-                                        activation = 'relu'))
+                                              activation = 'relu'))
                       
-        self.model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
+        self.model.compile(optimizer='adam', 
+                           loss='mse', 
+                           metrics=['accuracy'])
 
     def fitness(self, x_test, y_test):
         test_loss, test_acc = self.model.evaluate(x_test, y_test)
@@ -219,14 +217,14 @@ class CNN:
 
     def __str__(self):
         model_summary = (f"nC: {self.nC}\n"
-                        f"nP: {self.nP}\n"
-                        f"nF: {self.nF}\n"
-                        f"c_nf: {self.c_nf}\n"
-                        f"c_fs: {self.c_fs}\n"
-                        f"c_pp: {self.c_pp}\n"
-                        f"c_ss: {self.c_ss}\n"
-                        f"p_fs: {self.p_fs}\n"
-                        f"p_ss: {self.p_ss}\n"
-                        f"p_pp: {self.p_pp}\n"
-                        f"op: {self.op}\n")
+                         f"nP: {self.nP}\n"
+                         f"nF: {self.nF}\n"
+                         f"c_nf: {self.c_nf}\n"
+                         f"c_fs: {self.c_fs}\n"
+                         f"c_pp: {self.c_pp}\n"
+                         f"c_ss: {self.c_ss}\n"
+                         f"p_fs: {self.p_fs}\n"
+                         f"p_ss: {self.p_ss}\n"
+                         f"p_pp: {self.p_pp}\n"
+                         f"op: {self.op}\n")
         return model_summary, str(self.model.summary())
