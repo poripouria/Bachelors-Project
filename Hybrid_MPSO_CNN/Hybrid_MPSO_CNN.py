@@ -50,9 +50,7 @@ class Particle_Swarm_L1:
         """Update particle position within bounds"""
         for i in range(len(self.pos_i)):
             self.pos_i[i] += self.vel_i[i]
-            self.pos_i[i] = max(bounds[i][0], min(self.pos_i[i], bounds[i][1]))
         
-
 class Particle_Swarm_L2:
     def __init__(self, search_space):
         self.c_nf = random.randint(search_space['c_nf'])
@@ -98,7 +96,7 @@ class Particle_Swarm_L2:
         """Update particle position within bounds"""
         for i in range(len(self.pos_ij)):
             self.pos_ij[i] += self.vel_ij[i]
-            self.pos_ij[i] = max(bounds[i][0], min(self.pos_ij[i], bounds[i][1]))
+            # self.pos_ij[i] = max(bounds[i][0], min(self.pos_ij[i], bounds[i][1]))
 
 
 class Hybrid_MPSO_CNN:
@@ -127,13 +125,13 @@ class Hybrid_MPSO_CNN:
                             }
         
         self.swarm_lvl1 = [PSL1 for _ in range(self.swarm_size_lvl1)]
-        self.swarm_lvl2 = [[] for _ in range(self.swarm_size_lvl2)]
+        self.swarm_lvl2 = [PSL2 for _ in range(self.swarm_size_lvl2)]
         self.gbest = None
 
     def level1_optimize(self):
         
         for i in range(self.max_iter_lvl1):
-            w = self.calculate_inertia(i, self.max_iter_lvl1)
+            w = self.calculate_omega(i, self.max_iter_lvl1)
 
             for j in range(self.swarm_size_lvl1):
                 gbest_ij = self.level2_optimize(self.swarm_lvl1[j])
@@ -155,7 +153,7 @@ class Hybrid_MPSO_CNN:
             self.swarm_lvl2[particle_l1].append(particle_l2)
 
         for i in range(self.max_iter_lvl2):
-            w = self.calculate_inertia(i, self.max_iter_lvl2)
+            w = self.calculate_omega(i, self.max_iter_lvl2)
             
             for particle in self.swarm_lvl2[particle_l1]:
                 particle.evaluate(CNN) 
@@ -167,10 +165,12 @@ class Hybrid_MPSO_CNN:
 
         return gbest_ij   
 
-    def calculate_omega(t, t_max, alpha=0.2):
+    def calculate_omega(self, t, t_max, alpha=0.2):
         if t < alpha * t_max:
-            return 0.9
-        return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
+            self.omega = 0.9
+        else:
+            self.omega = 1 / (1 + math.e ** ((10 * t - t_max) / t_max))   # Maximum iterations at Swarm Level-2
+        return self.omega
 
 
 class CNN:
