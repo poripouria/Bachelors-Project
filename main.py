@@ -9,8 +9,8 @@ Description:
 Student Name & ID: Pouria Alimoradpor 9912035
 """
 
-from Hybrid_MPSO_CNN import *
-from DeepUnfolding import *
+from Hybrid_MPSO_CNN import Hybrid_MPSO_CNN
+from Deep_Unfolding_Network import Deep_Unfolding_Network
 
 if __name__ == "__main__":
     pass
