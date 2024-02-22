@@ -15,8 +15,6 @@ class Particle_L1:
         self.nC = random.randint(search_space['nC'])
         self.nP = random.randint(search_space['nP'], self.nC)
         self.nF = random.randint(search_space['nF'], self.nC)
-        self.swarm_size_lvl2 = 5*self.nC*8              # Swarm size at Swarm Level-2
-        self.swarm_lvl2 = [Particle_L2 for _ in range(self.swarm_size_lvl2)]
 
         self.pos_i = [self.nC, self.nP, self.nF]        # Particle position 
         self.vel_i = [0, 0, 0]                          # Particle velocity
@@ -25,14 +23,14 @@ class Particle_L1:
         self.gbest_i = None                             # Global best position
         self.F_i = -float("inf")                        # Current fitness
 
+        self.swarm_size_lvl2 = 5*self.nC*8              # Swarm size at Swarm Level-2
+        self.swarm_lvl2 = [Particle_L2 for _ in range(self.swarm_size_lvl2)]
+
     def evaluate(self):
         """Evaluate particle fitness by """
-        self.F_i = None
+        F_i = 
         
         # Check personal best
-        
-        # Check global best
-        
 
     def update_velocity(self, w, c1, c2):
         """Update particle velocity"""
@@ -66,15 +64,13 @@ class Particle_L2:
         self.gbest_ij = None                                            # Global best position
         self.F_ij = -float("inf")                                       # Current fitness
 
-    def evaluate(self, cnn, x_test, y_test):
+    def evaluate(self, cnn, x_train, y_train):
         """Evaluate particle fitness using CNN"""
-        cnn.build_model(self.pos_ij)  
-        self.F_ij = cnn.fitness(x_test, y_test)
+        _, F_ij = cnn.fitness(x_train, y_train)
 
-        # Check personal best
-        
-        # Check global best
-        
+        if F_ij > self.F_ij:
+            self.F_ij = F_ij
+            self.pbest_ij = self.pos_ij.copy()   
 
     def update_velocity(self, w, c1, c2):
         """Update particle velocity"""
@@ -116,18 +112,45 @@ class Hybrid_MPSO_CNN:
         
 
     def calculate_omega(t, t_max, alpha=0.2):
+        """Calculate inertia weight"""
         if t < alpha * t_max:
             return 0.9
         return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))
 
     def level1_optimize(self):
-        pass
+        """Optimize hyperparameters at Swarm Level-1"""
+        sl1_gbest = max(self.swarm_lvl1, key=lambda x: x.F_i)
+        for t in range(self.max_iter_lvl1):
+            w = self.calculate_omega(t, self.max_iter_lvl1)
+            for i, particle_l1 in enumerate(self.swarm_lvl1):
+                gbest_i, fitness_i = self.level2_optimize(particle_l1, w)
+                if fitness_i > particle_l1.F_i:
+                    particle_l1.F_i = fitness_i
+                    particle_l1.pbest_i = particle_l1.pos_i.copy()
+                    if fitness_i > sl1_gbest.F_i:
+                        sl1_gbest = particle_l1.pos_i.copy()
+                
+        return sl1_gbest
         
     def level2_optimize(self, particle_l1, w):
-        pass
+        """Optimize hyperparameters at Swarm Level-2"""
+        for t in range(self.max_iter_lvl2):
+            for i, particle_L2 in enumerate(particle_l1.swarm_lvl2):
+                particle_L2.update_velocity(w, self.c1, self.c2)
+                particle_L2.update_position()
+                particle_L2.evaluate()
+                if particle_L2.F_ij > particle_L2.F_ij:
+                    particle_L2.F_ij = particle_L2.F_ij
+                    particle_L2.pbest_ij = particle_L2.pos_ij.copy()
+                    if particle_L2.F_ij > particle_L2.gbest_ij:
+                        particle_L2.gbest_ij = particle_L2.pos_ij.copy()
+        
+        return particle_L2.gbest_ij, particle_L2.F_ij
     
     def run(self):
-        pass
+        """Run the algorithm"""
+        gbest, cnn = self.level1_optimize()
+        return gbest, cnn
 
 class CNN:
     def __init__(self, hyperparameters):
@@ -174,11 +197,7 @@ class CNN:
         
         self.model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.2)
 
-    def fitness(self, x_train, y_train):
-        _, test_acc = self.model.evaluate(x_train, y_train)
-        return test_acc
-    
-    def evaluate_model(self, x_test, y_test):
+    def fitness(self, x_test, y_test):
         return self.model.evaluate(x_test, y_test)
 
     def __repr__(self):
