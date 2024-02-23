@@ -8,7 +8,7 @@ Description:
 import random
 import math
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
 
 class Particle_L1:
     def __init__(self, search_space):
@@ -151,7 +151,10 @@ class Hybrid_MPSO_CNN:
     
     def run(self):
         lvl1_hp, lvl2_hp, fitness = self.level1_optimize()
-        return lvl1_hp, lvl2_hp, fitness 
+        return lvl1_hp, lvl2_hp, fitness
+    
+    def __repr__(self):
+        return f"Max_iter_lvl1: {self.max_iter_lvl1}, Max_iter_lvl2: {self.max_iter_lvl2}"
 
 class CNN:
     def __init__(self, l1_hyperparameters, l2_hyperparameters):
@@ -181,7 +184,6 @@ class CNN:
                 self.model.add(MaxPooling2D(pool_size = (self.p_fs, self.p_fs), 
                                             strides = (self.p_ss, self.p_ss), 
                                             padding = 'valid' if self.p_pp == 0 else 'same'))
-            
                                                    
         self.model.add(Flatten())
         
