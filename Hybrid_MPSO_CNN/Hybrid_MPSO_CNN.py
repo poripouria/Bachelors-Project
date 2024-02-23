@@ -12,6 +12,7 @@ from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
 
 class Particle_L1:
     def __init__(self, search_space):
+        self.search_space = search_space
         self.nC = random.randint(search_space['nC'][0], search_space['nC'][1])
         self.nP = random.randint(search_space['nP'][0], self.nC)
         self.nF = random.randint(search_space['nF'][0], self.nC)
@@ -38,13 +39,20 @@ class Particle_L1:
         for i in range(len(self.pos_i)):
             self.pos_i[i] += self.vel_i[i]
             self.pos_i[i] = int (self.pos_i[i])
-            # self.pos_i[i] = max(bounds[i][0], min(self.pos_i[i], bounds[i][1]))
+            
+            if i == 0:
+                self.pos_i[i] = max(self.search_space['nC'][0], min(self.search_space['nC'][1], self.pos_i[i]))
+            elif i == 1:
+                self.pos_i[i] = max(self.search_space['nP'][0], min(self.search_space['nP'][1], self.pos_i[i]))
+            elif i == 2:
+                self.pos_i[i] = max(self.search_space['nF'][0], min(self.search_space['nF'][1], self.pos_i[i]))
         
     def __repr__(self):
         return f"nC: {self.nC}, nP: {self.nP}, nF: {self.nF}"
 
 class Particle_L2:
     def __init__(self, search_space):
+        self.search_space = search_space
         self.c_nf = random.randint(*search_space['c_nf'])
         self.c_fs = random.randrange(search_space['c_fs'][0], search_space['c_fs'][1]+1, 2)
         self.c_pp = random.randint(*search_space['c_pp'])
@@ -78,7 +86,23 @@ class Particle_L2:
         for i in range(len(self.pos_ij)):
             self.pos_ij[i] += self.vel_ij[i]
             self.pos_ij[i] = int (self.pos_ij[i])
-            # self.pos_ij[i] = max(bounds[i][0], min(self.pos_ij[i], bounds[i][1]))
+
+            if i == 0:
+                self.pos_ij[i] = max(self.search_space['c_nf'][0], min(self.search_space['c_nf'][1], self.pos_ij[i]))
+            elif i == 1:
+                self.pos_ij[i] = max(self.search_space['c_fs'][0], min(self.search_space['c_fs'][1], self.pos_ij[i]))
+            elif i == 2:
+                self.pos_ij[i] = max(self.search_space['c_pp'][0], min(self.search_space['c_pp'][1], self.pos_ij[i]))
+            elif i == 3:
+                self.pos_ij[i] = max(self.search_space['c_ss'][0], min(self.search_space['c_ss'][1], self.pos_ij[i]))
+            elif i == 4:
+                self.pos_ij[i] = max(self.search_space['p_fs'][0], min(self.search_space['p_fs'][1], self.pos_ij[i]))
+            elif i == 5:
+                self.pos_ij[i] = max(self.search_space['p_ss'][0], min(self.search_space['p_ss'][1], self.pos_ij[i]))
+            elif i == 6:
+                self.pos_ij[i] = max(self.search_space['p_pp'][0], min(self.search_space['p_pp'][1], self.pos_ij[i]))
+            elif i == 7:
+                self.pos_ij[i] = max(self.search_space['op'][0], min(self.search_space['op'][1], self.pos_ij[i]))            
 
     def __repr__(self):
         return f"c_nf: {self.c_nf}, c_fs: {self.c_fs}, c_pp: {self.c_pp}, c_ss: {self.c_ss}, p_fs: {self.p_fs}, p_ss: {self.p_ss}, p_pp: {self.p_pp}, op: {self.op}"
@@ -187,9 +211,9 @@ class CNN:
                                                    
         self.model.add(Flatten())
         
-        for i in range(self.nF):
-            self.model.add(Dense(units = self.op if i < self.nF-1 else output_shape, 
-                                 activation = 'relu' if i < self.nF-1 else 'softmax'))
+        for i in range(self.nF+1):
+            self.model.add(Dense(units = self.op if i < self.nF else output_shape, 
+                                 activation = 'relu' if i < self.nF else 'softmax'))
         
         return self.model
 
