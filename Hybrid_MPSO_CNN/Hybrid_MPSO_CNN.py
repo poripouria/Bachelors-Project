@@ -8,7 +8,7 @@ Description:
 import random
 import math
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout
 
 class Particle_L1:
     def __init__(self, search_space):
@@ -23,9 +23,7 @@ class Particle_L1:
         self.vel_i = [0, 0, 0]                          # Particle velocity
         
         self.pbest_i = self.pos_i                       # Personal best position
-        self.pbest_i_F = -float("inf")                  # Personal best fitness
-        self.gbest = self.pbest_i                       # Global best position
-        self.gbest_F = float('inf')                     # Global best fitness
+        self.gbest_i = self.pbest_i                     # Global best position
         self.F_i = -float("inf")                        # Current fitness
 
         self.swarm_size_lvl2 = 5*self.nC                # Swarm size at Swarm Level-2
@@ -35,7 +33,7 @@ class Particle_L1:
         r1 = random.uniform(0,1)
         r2 = random.uniform(0,1)
         for i in range(len(self.vel_i)):
-            self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(self.gbest[i] - self.pos_i[i])
+            self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(self.gbest_i[i] - self.pos_i[i])
 
     def update_position(self):
         for i in range(len(self.pos_i)):
@@ -71,9 +69,7 @@ class Particle_L2:
         self.vel_ij = [0] * len(self.pos_ij)            # Particle velocity 
         
         self.pbest_ij = self.pos_ij                     # Personal best position
-        self.pbest_ij_F = -float("inf")                 # Personal best fitness
-        self.gbest = self.pbest_ij                      # Global best position
-        self.gbest_F = float('inf')                     # Global best fitness
+        self.gbest_ij = self.pbest_ij                   # Global best position
         self.F_ij = -float("inf")                       # Current fitness
 
     def evaluate(self, cnn, x_train, y_train):
@@ -83,7 +79,7 @@ class Particle_L2:
         r1 = random.uniform(0,1)
         r2 = random.uniform(0,1)
         for i in range(len(self.vel_ij)):
-            self.vel_ij[i] = w*self.vel_ij[i] + c1*r1*(self.pbest_ij[i] - self.pos_ij[i]) + c2*r2*(self.gbest[i] - self.pos_ij[i])
+            self.vel_ij[i] = w*self.vel_ij[i] + c1*r1*(self.pbest_ij[i] - self.pos_ij[i]) + c2*r2*(self.gbest_ij[i] - self.pos_ij[i])
                              
     def update_position(self):
         for i in range(len(self.pos_ij)):
@@ -128,46 +124,55 @@ class Hybrid_MPSO_CNN:
         return 1 / (1 + math.e ** ((10 * t - t_max) / t_max))
 
     def level1_optimize(self):
+        bestParticle_i = None
+        gbest_i_F = -float("inf")
         for t in range(self.max_iter_lvl1):
             w = self.calculate_omega(t, self.max_iter_lvl1)
+            pbest_i_F = -float("inf")
             for i, particle_l1 in enumerate(self.swarm_lvl1):
-                print(f"\n-- L1itr_{t+1}/{self.max_iter_lvl1} Particle_L1num_{i+1}/{len(self.swarm_lvl1)} --\n")
-                particle_l2_gbest, particle_l1.F_i = self.level2_optimize(particle_l1, w)
-                if particle_l1.F_i > particle_l1.pbest_i_F:
-                    particle_l1.pbest_i_F = particle_l1.F_i
+                particle_l1.update_velocity(w, self.c1, self.c2)
+                particle_l1.update_position()
+                print(f"\n---L1itr_{t+1}/{self.max_iter_lvl1} Particle_L1num_{i+1}/{len(self.swarm_lvl1)}---\n")
+                bestParticle_ij, particle_l1.F_i = self.level2_optimize(particle_l1, w)
+                if particle_l1.F_i > pbest_i_F:
                     particle_l1.pbest_i = particle_l1.pos_i
-                    if particle_l1.F_i > particle_l1.gbest_F:
-                        particle_l1.gbest_F = particle_l1.F_i
-                        particle_l1.gbest = particle_l1.pos_i
+                    pbest_i_F = particle_l1.F_i
+                    if particle_l1.F_i > gbest_i_F:
+                        bestParticle_i = particle_l1.pos_i
+                        gbest_i_F = particle_l1.F_i
 
-        print(f"pl1gbest: {particle_l1.gbest}, pl2gbest: {particle_l2_gbest}, pl1fitness: {particle_l1.F_i}")
-        return particle_l1.gbest, particle_l2_gbest, particle_l1.F_i
+        print(f"pl1gbest: {bestParticle_i}, pl2gbest: {bestParticle_ij}, pl1fitness: {particle_l1.F_i}")
+        return bestParticle_i, bestParticle_ij, particle_l1.F_i
         
     def level2_optimize(self, particle_l1, w):
+        bestParticle_ij = None
+        gbest_ij_F = -float("inf")
         for t in range(self.max_iter_lvl2):
+            pbest_ij_F = -float("inf")
             for i, particle_l2 in enumerate(particle_l1.swarm_lvl2):
-                    particle_l2.update_velocity(w, self.c1, self.c2)
-                    particle_l2.update_position()
-                    print(f"\n-- L2itr_{t+1}/{self.max_iter_lvl2} Particle_L2num_{i+1}/{len(particle_l1.swarm_lvl2)} --\n")
-                    print(particle_l1.pos_i, particle_l2.pos_ij)
-                    try:
-                        cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
-                        cnn.buid_model(self.input_shape, self.output_shape)
-                        cnn.train_model(self.x_train, self.y_train, epochs=5, batch_size=128)
-                        particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
-                    except Exception as e:
-                        print("Invalid hyperparameters")
-                        print(e)
-                        continue
-                    if particle_l2.F_ij > particle_l2.pbest_ij_F:
-                        particle_l2.pbest_ij_F = particle_l2.F_ij
-                        particle_l2.pbest_ij = particle_l2.pos_ij
-                        if particle_l2.F_ij > particle_l2.gbest_F:
-                            particle_l2.gbest_F = particle_l2.F_ij
-                            particle_l2.gbest = particle_l2.pos_ij
+                particle_l2.update_velocity(w, self.c1, self.c2)
+                particle_l2.update_position()
+                print(f" --L2itr_{t+1}/{self.max_iter_lvl2} Particle_L2num_{i+1}/{len(particle_l1.swarm_lvl2)}-- \n")
+                print(particle_l1.pos_i, particle_l2.pos_ij)
+                print(particle_l1, particle_l2)
+                try:
+                    cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
+                    cnn.buid_model(self.input_shape, self.output_shape)
+                    cnn.train_model(self.x_train, self.y_train, epochs=2, batch_size=128)
+                    particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
+                except Exception as e:
+                    print("Invalid hyperparameters")
+                    print(e)
+                    continue
+                if particle_l2.F_ij > pbest_ij_F:
+                    particle_l2.pbest_ij = particle_l2.pos_ij
+                    pbest_ij_F = particle_l2.F_ij
+                    if particle_l2.F_ij > gbest_ij_F:
+                        bestParticle_ij = particle_l2.pos_ij
+                        gbest_ij_F = particle_l2.F_ij
         
-        print(f"pl2gbest: {particle_l2.gbest}, pl2fitness: {particle_l2.F_ij}")
-        return particle_l2.gbest, particle_l2.F_ij
+        print(f"pl2gbest: {bestParticle_ij}, pl2fitness: {gbest_ij_F}")
+        return bestParticle_ij, gbest_ij_F
     
     def run(self):
         lvl1_hp, lvl2_hp, fitness = self.level1_optimize()
@@ -210,10 +215,12 @@ class CNN:
                                                    
         self.model.add(Flatten())
         
-        for i in range(self.nF+1):
-            self.model.add(Dense(units = self.op if i < self.nF else output_shape, 
-                                 activation = 'relu' if i < self.nF else 'softmax'))
-        
+        for i in range(self.nF):
+            self.model.add(Dense(units = self.op, activation = 'relu'))
+            self.model.add(Dropout(0.2))
+
+        self.model.add(Dense(units = output_shape, activation = 'softmax'))
+    
         return self.model
 
     def train_model(self, x_train, y_train, epochs=20, batch_size=64):
@@ -227,7 +234,8 @@ class CNN:
         return self.model.evaluate(x_test, y_test)
 
     def __str__(self):
-        model_summary = (f"nC: {self.nC}\n"
+        model_summary = (
+                         f"nC: {self.nC}\n"
                          f"nP: {self.nP}\n"
                          f"nF: {self.nF}\n"
                          f"c_nf: {self.c_nf}\n"
@@ -237,5 +245,6 @@ class CNN:
                          f"p_fs: {self.p_fs}\n"
                          f"p_ss: {self.p_ss}\n"
                          f"p_pp: {self.p_pp}\n"
-                         f"op: {self.op}\n")
-        return model_summary, str(self.model.summary())
+                         f"op: {self.op}\n"
+                        ) + self.model.summary()
+        return model_summary
