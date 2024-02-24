@@ -163,7 +163,7 @@ class Hybrid_MPSO_CNN:
                 try:
                     cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
                     cnn.buid_model(self.input_shape, self.output_shape)
-                    cnn.train_model(self.x_train, self.y_train, epochs=2, batch_size=128)
+                    cnn.train_model(self.x_train, self.y_train, epochs=10, batch_size=128)
                     particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
                 except Exception as e:
                     print("^^^^^^ Invalid hyperparameters ^^^^^^")
