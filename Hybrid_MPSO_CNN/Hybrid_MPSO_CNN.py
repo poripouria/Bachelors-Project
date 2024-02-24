@@ -48,20 +48,20 @@ class Particle_L1:
 
 class Particle_L2:
     def __init__(self, search_space):
-        self.c_nf = random.randint(*search_space['c_nf'])
-        self.c_fs = random.randrange(search_space['c_fs'][0], search_space['c_fs'][1]+1, 2)
-        self.c_pp = random.randint(*search_space['c_pp'])
+        self.c_nf = random.randint(search_space['c_nf'][0], search_space['c_nf'][1])
+        self.c_fs = random.randrange(search_space['c_fs'][0], search_space['c_fs'][1], 2)
+        self.c_pp = random.randint(search_space['c_pp'][0], search_space['c_pp'][1])
         self.c_ss = random.randint(search_space['c_ss'][0], self.c_fs)
-        self.p_fs = random.randrange(search_space['p_fs'][0], search_space['p_fs'][1]+1, 2)
-        self.p_ss = random.randint(*search_space['p_ss'])
+        self.p_fs = random.randrange(search_space['p_fs'][0], search_space['p_fs'][1], 2)
+        self.p_ss = random.randint(search_space['p_ss'][0], search_space['p_ss'][1])
         self.p_pp = random.randint(search_space['p_pp'][0], self.p_fs)
-        self.op   = random.randint(*search_space['op'])
-        self.bounds = [[search_space['c_nf'][0], search_space['c_nf'][1]], 
-                       [search_space['c_fs'][0], search_space['c_fs'][1]], 
-                       [search_space['c_pp'][0], search_space['c_pp'][1]], 
-                       [search_space['c_ss'][0], self.c_fs], 
-                       [search_space['p_fs'][0], search_space['p_fs'][1]], 
-                       [search_space['p_ss'][0], search_space['p_ss'][1]], 
+        self.op   = random.randint(search_space['op'][0], search_space['op'][1])
+        self.bounds = [[search_space['c_nf'][0], search_space['c_nf'][1]],
+                       [search_space['c_fs'][0], search_space['c_fs'][1]],
+                       [search_space['c_pp'][0], search_space['c_pp'][1]],
+                       [search_space['c_ss'][0], self.c_fs],
+                       [search_space['p_fs'][0], search_space['p_fs'][1]],
+                       [search_space['p_ss'][0], search_space['p_ss'][1]],
                        [search_space['p_pp'][0], self.p_fs],
                        [search_space['op'][0], search_space['op'][1]]]
 
@@ -131,6 +131,7 @@ class Hybrid_MPSO_CNN:
         for t in range(self.max_iter_lvl1):
             w = self.calculate_omega(t, self.max_iter_lvl1)
             for i, particle_l1 in enumerate(self.swarm_lvl1):
+                print(f"\n-- L1itr_{t+1}/{self.max_iter_lvl1} Particle_L1num_{i+1}/{len(self.swarm_lvl1)} --\n")
                 particle_l2_gbest, particle_l1.F_i = self.level2_optimize(particle_l1, w)
                 if particle_l1.F_i > particle_l1.pbest_i_F:
                     particle_l1.pbest_i_F = particle_l1.F_i
@@ -139,25 +140,33 @@ class Hybrid_MPSO_CNN:
                         particle_l1.gbest_F = particle_l1.F_i
                         particle_l1.gbest = particle_l1.pos_i
 
+        print(f"pl1gbest: {particle_l1.gbest}, pl2gbest: {particle_l2_gbest}, pl1fitness: {particle_l1.F_i}")
         return particle_l1.gbest, particle_l2_gbest, particle_l1.F_i
         
     def level2_optimize(self, particle_l1, w):
         for t in range(self.max_iter_lvl2):
             for i, particle_l2 in enumerate(particle_l1.swarm_lvl2):
-                particle_l2.update_velocity(w, self.c1, self.c2)
-                particle_l2.update_position()
-                cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
-                print(particle_l1.pos_i, particle_l2.pos_ij)
-                cnn.buid_model(self.input_shape, self.output_shape)
-                cnn.train_model(self.x_train, self.y_train, epochs=5, batch_size=256)
-                particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
-                if particle_l2.F_ij > particle_l2.pbest_ij_F:
-                    particle_l2.pbest_ij_F = particle_l2.F_ij
-                    particle_l2.pbest_ij = particle_l2.pos_ij
-                    if particle_l2.F_ij > particle_l2.gbest_F:
-                        particle_l2.gbest_F = particle_l2.F_ij
-                        particle_l2.gbest = particle_l2.pos_ij
+                    particle_l2.update_velocity(w, self.c1, self.c2)
+                    particle_l2.update_position()
+                    print(f"\n-- L2itr_{t+1}/{self.max_iter_lvl2} Particle_L2num_{i+1}/{len(particle_l1.swarm_lvl2)} --\n")
+                    print(particle_l1.pos_i, particle_l2.pos_ij)
+                    try:
+                        cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
+                        cnn.buid_model(self.input_shape, self.output_shape)
+                        cnn.train_model(self.x_train, self.y_train, epochs=5, batch_size=128)
+                        particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
+                    except Exception as e:
+                        print("Invalid hyperparameters")
+                        print(e)
+                        continue
+                    if particle_l2.F_ij > particle_l2.pbest_ij_F:
+                        particle_l2.pbest_ij_F = particle_l2.F_ij
+                        particle_l2.pbest_ij = particle_l2.pos_ij
+                        if particle_l2.F_ij > particle_l2.gbest_F:
+                            particle_l2.gbest_F = particle_l2.F_ij
+                            particle_l2.gbest = particle_l2.pos_ij
         
+        print(f"pl2gbest: {particle_l2.gbest}, pl2fitness: {particle_l2.F_ij}")
         return particle_l2.gbest, particle_l2.F_ij
     
     def run(self):
@@ -189,9 +198,12 @@ class CNN:
                                   kernel_size = (self.c_fs, self.c_fs), 
                                   strides = (self.c_ss, self.c_ss), 
                                   padding = 'valid' if self.c_pp == 0 else 'same', 
-                                  activation = 'relu'))
+                                  activation = 'relu',
+                                  input_shape = input_shape))
+
+            input_shape = self.model.layers[-1].output_shape[1:]
             
-            if i < self.nP:
+            if i < self.nP and all(dim >= self.p_fs for dim in input_shape):
                 self.model.add(MaxPooling2D(pool_size = (self.p_fs, self.p_fs), 
                                             strides = (self.p_ss, self.p_ss), 
                                             padding = 'valid' if self.p_pp == 0 else 'same'))
