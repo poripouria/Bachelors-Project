@@ -130,16 +130,16 @@ class Hybrid_MPSO_CNN:
             w = self.calculate_omega(t, self.max_iter_lvl1)
             pbest_i_F = -float("inf")
             for i, particle_l1 in enumerate(self.swarm_lvl1):
-                particle_l1.update_velocity(w, self.c1, self.c2)
-                particle_l1.update_position()
                 print(f"\n---L1itr_{t+1}/{self.max_iter_lvl1} Particle_L1num_{i+1}/{len(self.swarm_lvl1)}---\n")
                 bestParticle_ij, particle_l1.F_i = self.level2_optimize(particle_l1, w)
                 if particle_l1.F_i > pbest_i_F:
                     particle_l1.pbest_i = particle_l1.pos_i
                     pbest_i_F = particle_l1.F_i
-                    if particle_l1.F_i > gbest_i_F:
-                        bestParticle_i = particle_l1.pos_i
-                        gbest_i_F = particle_l1.F_i
+                if particle_l1.F_i > gbest_i_F:
+                    bestParticle_i = particle_l1.pos_i
+                    gbest_i_F = particle_l1.F_i
+                particle_l1.update_velocity(w, self.c1, self.c2)
+                particle_l1.update_position()
 
         print(f"pl1gbest: {bestParticle_i}, pl2gbest: {bestParticle_ij}, pl1fitness: {particle_l1.F_i}")
         return bestParticle_i, bestParticle_ij, particle_l1.F_i
@@ -167,9 +167,9 @@ class Hybrid_MPSO_CNN:
                 if particle_l2.F_ij > pbest_ij_F:
                     particle_l2.pbest_ij = particle_l2.pos_ij
                     pbest_ij_F = particle_l2.F_ij
-                    if particle_l2.F_ij > gbest_ij_F:
-                        bestParticle_ij = particle_l2.pos_ij
-                        gbest_ij_F = particle_l2.F_ij
+                if particle_l2.F_ij > gbest_ij_F:
+                    bestParticle_ij = particle_l2.pos_ij
+                    gbest_ij_F = particle_l2.F_ij
         
         print(f"pl2gbest: {bestParticle_ij}, pl2fitness: {gbest_ij_F}")
         return bestParticle_ij, gbest_ij_F
