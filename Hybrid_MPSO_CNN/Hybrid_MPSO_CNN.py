@@ -28,6 +28,7 @@ class Particle_L1:
 
         self.swarm_size_lvl2 = 5*self.nC                # Swarm size at Swarm Level-2
         self.swarm_lvl2 = [Particle_L2(search_space) for _ in range(self.swarm_size_lvl2)]
+        self.bestParticle_ij = None                     # Best particle from swarm level-2
 
     def update_velocity(self, gbest_i, w, c1, c2):
         r1 = random.uniform(0,1)
@@ -35,7 +36,8 @@ class Particle_L1:
         for i in range(len(self.vel_i)):
             self.vel_i[i] = w*self.vel_i[i] + c1*r1*(self.pbest_i[i] - self.pos_i[i]) + c2*r2*(gbest_i[i] - self.pos_i[i])
         print("\n==========================================================")
-        print("Velocity1: ", self.vel_i, "\n", f"pos_i {self.pos_i}, pbest_i: {self.pbest_i}, gbest_i: {gbest_i}")
+        print("Velocity1: ", ['{:.2f}'.format(v) for v in self.vel_i], f" (w, r1, r2 : {w}, ", '{:.2f}, '.format(r1), '{:.2f})'.format(r2))
+        print(f"pos_i {self.pos_i}, pbest_i: {self.pbest_i}, gbest_i: {gbest_i}")
         print("==========================================================\n")
 
     def update_position(self):
@@ -46,6 +48,9 @@ class Particle_L1:
         
     def __repr__(self):
         return f"nC: {self.nC}, nP: {self.nP}, nF: {self.nF}"
+
+    def __str__(self):
+        return f"{self.pos_i}"
 
 class Particle_L2:
     def __init__(self, search_space):
@@ -75,8 +80,8 @@ class Particle_L2:
         self.pbest_ij = self.pos_ij.copy()              # Personal best position
         self.pbest_ij_F = self.F_ij                     # Personal best fitness
 
-    def evaluate(self, cnn, x_train, y_train):
-        return cnn.fitness(x_train, y_train)[1]
+    def evaluate(self, cnn, x, y):
+        return cnn.model.evaluate(x, y)[1]
 
     def update_velocity(self, gbest_ij, w, c1, c2):
         r1 = random.uniform(0,1)
@@ -84,7 +89,8 @@ class Particle_L2:
         for i in range(len(self.vel_ij)):
             self.vel_ij[i] = w*self.vel_ij[i] + c1*r1*(self.pbest_ij[i] - self.pos_ij[i]) + c2*r2*(gbest_ij[i] - self.pos_ij[i])
         print("\n==========================================================")
-        print("Velocity2: ", self.vel_ij, "\n", f"pos_ij: {self.pos_ij}, pbest_ij: {self.pbest_ij}, gbest_ij: {gbest_ij}")
+        print("Velocity2: ", ['{:.2f}'.format(v) for v in self.vel_ij], f" (w, r1, r2 : {w}, ", '{:.2f}, '.format(r1), '{:.2f})'.format(r2))
+        print(f"pos_ij {self.pos_ij}, pbest_ij: {self.pbest_ij}, gbest_ij: {gbest_ij}")
         print("==========================================================\n")
                              
     def update_position(self):
@@ -95,6 +101,9 @@ class Particle_L2:
 
     def __repr__(self):
         return f"c_nf: {self.c_nf}, c_fs: {self.c_fs}, c_pp: {self.c_pp}, c_ss: {self.c_ss}, p_fs: {self.p_fs}, p_ss: {self.p_ss}, p_pp: {self.p_pp}, op: {self.op}"
+
+    def __str__(self):
+        return f"{self.pos_ij}"
 
 class Hybrid_MPSO_CNN:
     def __init__(self, x_train, y_train, x_test, y_test, input_shape, output_shape):
@@ -136,7 +145,7 @@ class Hybrid_MPSO_CNN:
             w = self.calculate_omega(t, self.max_iter_lvl1)
             for i, particle_l1 in enumerate(self.swarm_lvl1):
                 print(f"\n*---L1itr_{t+1}/{self.max_iter_lvl1} PL1num_{i+1}/{len(self.swarm_lvl1)}---*")
-                bestParticle_ij, particle_l1.F_i = self.level2_optimize(particle_l1, w)
+                particle_l1.bestParticle_ij, particle_l1.F_i = self.level2_optimize(particle_l1, w)
                 if particle_l1.F_i > particle_l1.pbest_i_F:
                     print(f"\n!!!!!!!! pbest_i updated from {particle_l1.pbest_i} to {particle_l1.pos_i} !!!!!!!!")
                     particle_l1.pbest_i_F = particle_l1.F_i
@@ -144,14 +153,14 @@ class Hybrid_MPSO_CNN:
                 if particle_l1.F_i > gbest_i_F:
                     print(f"!!!!!!!! gbest_i updated from {bestParticle_i} to {particle_l1.pos_i} !!!!!!!!\n")
                     gbest_i_F = particle_l1.F_i
-                    bestParticle_i = particle_l1.pos_i
-                particle_l1.update_velocity(bestParticle_i, w, self.c1, self.c2)
+                    bestParticle_i = particle_l1
+                particle_l1.update_velocity(bestParticle_i.pos_i, w, self.c1, self.c2)
                 particle_l1.update_position()
 
         print("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        print(f"pl1gbest: {bestParticle_i}, pl2gbest: {bestParticle_ij}, pl1fitness: {particle_l1.F_i}")
+        print(f"pl1gbest: {bestParticle_i}, pl2gbest: {particle_l1.bestParticle_ij}, pl1fitness: {particle_l1.F_i}")
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n")
-        return bestParticle_i, bestParticle_ij, particle_l1.F_i
+        return bestParticle_i, particle_l1.bestParticle_ij, particle_l1.F_i
         
     def level2_optimize(self, particle_l1, w):
         bestParticle_ij = None
@@ -159,11 +168,12 @@ class Hybrid_MPSO_CNN:
         for t in range(self.max_iter_lvl2):
             for i, particle_l2 in enumerate(particle_l1.swarm_lvl2):
                 print(f"* --L2itr_{t+1}/{self.max_iter_lvl2} PL2num_{i+1}/{len(particle_l1.swarm_lvl2)}-- *\n")
-                print(particle_l1.pos_i, particle_l2.pos_ij)
+                print(particle_l1, particle_l2, " --> ", "[nC, nP, nF] [c_nf, c_fs, c_pp, c_ss, p_fs, p_ss, p_pp, op]")
                 try:
                     cnn = CNN(particle_l1.pos_i, particle_l2.pos_ij)
-                    cnn.buid_model(self.input_shape, self.output_shape)
-                    cnn.train_model(self.x_train, self.y_train, epochs=10, batch_size=128)
+                    model = cnn.buid_model(self.input_shape, self.output_shape)
+                    model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
+                    model.fit(self.x_train, self.y_train,  epochs=10, batch_size=128, validation_split=0.2)
                     particle_l2.F_ij = particle_l2.evaluate(cnn, self.x_train, self.y_train)
                 except Exception as e:
                     print("^^^^^^ Invalid hyperparameters ^^^^^^")
@@ -176,8 +186,8 @@ class Hybrid_MPSO_CNN:
                 if particle_l2.F_ij > gbest_ij_F:
                     print(f"!!!!!!!! gbest_ij updated from {bestParticle_ij} to {particle_l2.pos_ij} !!!!!!!!\n")
                     gbest_ij_F = particle_l2.F_ij
-                    bestParticle_ij = particle_l2.pos_ij
-                particle_l2.update_velocity(bestParticle_ij, w, self.c1, self.c2)
+                    bestParticle_ij = particle_l2
+                particle_l2.update_velocity(bestParticle_ij.pos_ij, w, self.c1, self.c2)
                 particle_l2.update_position()
         
         print("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
@@ -186,8 +196,8 @@ class Hybrid_MPSO_CNN:
         return bestParticle_ij, gbest_ij_F
     
     def run(self):
-        lvl1_hp, lvl2_hp, fitness = self.level1_optimize()
-        return lvl1_hp, lvl2_hp, fitness
+        lvl1_bestP, lvl2_bestP, fitness = self.level1_optimize()
+        return lvl1_bestP.pos_i, lvl2_bestP.pos_ij, fitness
     
     def __repr__(self):
         return f"Max_iter_lvl1: {self.max_iter_lvl1}, Max_iter_lvl2: {self.max_iter_lvl2}"
@@ -233,16 +243,6 @@ class CNN:
         self.model.add(Dense(units = output_shape, activation = 'softmax'))
     
         return self.model
-
-    def train_model(self, x_train, y_train, epochs=20, batch_size=64):
-        self.model.compile(optimizer='adam', 
-                           loss='mse', 
-                           metrics=['accuracy'])
-
-        self.model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.2)
-
-    def fitness(self, x_test, y_test):
-        return self.model.evaluate(x_test, y_test)
 
     def __str__(self):
         model_summary = (
