@@ -2,7 +2,7 @@
 Description:
     Implementation of "Hybrid MPSO-CNN: Multi-level Particle Swarm optimized hyperparameters of Convolutional Neural Network"
     doi: https://doi.org/10.1016/j.swevo.2021.100863
-    Using this algorithm for tuning hyper-parameters of deep unfolding network
+    (Using this algorithm for tuning hyper-parameters of deep unfolding network)
 """
 
 import random
